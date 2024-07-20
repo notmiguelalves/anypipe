@@ -2,6 +2,7 @@ package dockerutils
 
 import (
 	"archive/tar"
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -149,6 +150,55 @@ func (du *DockerUtils) Exec(c *Container, cmd string) error {
 }
 
 func (du *DockerUtils) CopyTo(c *Container, srcPath, dstPath string) error {
+	var buf bytes.Buffer
+	// zr := gzip.NewWriter(&buf)
+	// defer zr.Close()
+	tw := tar.NewWriter(&buf)
+	defer tw.Close()
+
+	err := filepath.Walk(srcPath, func(file string, fi os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		header, err := tar.FileInfoHeader(fi, file)
+		if err != nil {
+			return err
+		}
+
+		relPath, err := filepath.Rel(srcPath, file)
+		if err != nil {
+			return err
+		}
+		header.Name = filepath.ToSlash(relPath)
+
+		if err := tw.WriteHeader(header); err != nil {
+			return err
+		}
+
+		if !fi.IsDir() {
+			data, err := os.Open(file)
+			if err != nil {
+				return err
+			}
+			defer data.Close()
+
+			_, err = io.Copy(tw, data)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	err = du.dockerClient.CopyToContainer(du.ctx, c.id, dstPath, &buf, container.CopyToContainerOptions{})
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

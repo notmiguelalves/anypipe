@@ -34,4 +34,29 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	err = du.Exec(container, "mkdir /dummy")
+	if err != nil {
+		panic(err)
+	}
+
+	err = du.CopyTo(container, "./dummy", "/dummy")
+	if err != nil {
+		panic(err)
+	}
+
+	err = du.Exec(container, "ls -l /")
+	if err != nil {
+		panic(err)
+	}
+
+	err = du.Exec(container, "ls -l /dummy")
+	if err != nil {
+		panic(err)
+	}
+
+	err = du.Exec(container, "cat /dummy/tmp.txt")
+	if err != nil {
+		panic(err)
+	}
 }
