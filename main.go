@@ -24,7 +24,8 @@ func main() {
 		panic(err)
 	}
 
-	err = du.Exec(container, []string{"echo", "hello world"})
+	container.AddEnv("help", "me")
+	err = du.Exec(container, "echo help=${help}")
 	if err != nil {
 		panic(err)
 	}

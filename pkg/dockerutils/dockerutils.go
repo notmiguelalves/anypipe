@@ -94,7 +94,10 @@ func (du *DockerUtils) CreateContainer(image string) (*Container, error) {
 		return nil, err
 	}
 
-	c := Container{id: resp.ID}
+	c := Container{
+		id:  resp.ID,
+		env: map[string]string{},
+	}
 	du.spawnedContainers = append(du.spawnedContainers, &c)
 
 	du.logger.Info(fmt.Sprintf("going to start container %s created from image %s", c.id, image))
@@ -107,10 +110,12 @@ func (du *DockerUtils) CreateContainer(image string) (*Container, error) {
 	return &c, nil
 }
 
-func (du *DockerUtils) Exec(c *Container, cmd []string) error {
-	du.logger.Info(fmt.Sprintf("going to execute %s on container %s", strings.Join(cmd, " "), c.id))
+func (du *DockerUtils) Exec(c *Container, cmd string) error {
+	du.logger.Info(fmt.Sprintf("going to execute %s on container %s", cmd, c.id))
 
-	resp, err := du.dockerClient.ContainerExecCreate(du.ctx, c.id, container.ExecOptions{Cmd: cmd, Detach: false, AttachStderr: true, AttachStdout: true, WorkingDir: "/home"})
+	shcmd := []string{"sh", "-c", cmd} // TODO @Miguel : this smells kinda bad
+
+	resp, err := du.dockerClient.ContainerExecCreate(du.ctx, c.id, container.ExecOptions{Cmd: shcmd, Env: c.Env(), Detach: false, AttachStderr: true, AttachStdout: true, WorkingDir: "/home"})
 	if err != nil {
 		du.logger.Error("failed to create exec operation on container %s : %s", c.id, err.Error())
 		return err
@@ -142,5 +147,27 @@ func (du *DockerUtils) Exec(c *Container, cmd []string) error {
 }
 
 type Container struct {
-	id string
+	id  string
+	env map[string]string
+}
+
+func sanitizeEnvKey(key string) string {
+	return strings.TrimSpace(strings.ReplaceAll(key, " ", ""))
+}
+
+func (c *Container) Env() []string {
+	env := []string{}
+	for key, value := range c.env {
+		env = append(env, fmt.Sprintf("%s=%s", key, value))
+	}
+
+	return env
+}
+
+func (c *Container) AddEnv(key, value string) {
+	c.env[sanitizeEnvKey(key)] = value
+}
+
+func (c *Container) RemoveEnv(key string) {
+	delete(c.env, sanitizeEnvKey(key))
 }
