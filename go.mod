@@ -2,7 +2,10 @@ module github.com/notmiguelalves/anypipe
 
 go 1.22.5
 
-require github.com/docker/docker v27.0.3+incompatible
+require (
+	github.com/docker/docker v27.0.3+incompatible
+	go.uber.org/mock v0.4.0
+)
 
 require (
 	github.com/Microsoft/go-winio v0.4.14 // indirect

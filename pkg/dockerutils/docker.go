@@ -12,25 +12,24 @@ import (
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/notmiguelalves/anypipe/pkg/dockerutils/wrapper"
 	"github.com/notmiguelalves/anypipe/pkg/utils"
 )
 
 type DockerUtils struct {
-	ctx               context.Context
 	logger            *slog.Logger
-	dockerClient      *client.Client
+	dockerClient      wrapper.DockerClient
 	spawnedContainers []*Container
 }
 
 func New(ctx context.Context, logger *slog.Logger) (*DockerUtils, error) {
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	cli, err := wrapper.NewClientWithOpts(ctx, client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		logger.Error(fmt.Sprintf("failed to initialize docker client: %s", err.Error()))
 		return nil, err
 	}
 
 	return &DockerUtils{
-		ctx:          ctx,
 		dockerClient: cli,
 		logger:       logger,
 	}, nil
@@ -42,7 +41,7 @@ func (du *DockerUtils) Close() error {
 	for _, c := range du.spawnedContainers {
 		du.logger.Info(fmt.Sprintf("going to cleanup %s", c.id))
 
-		err := du.dockerClient.ContainerRemove(du.ctx, c.id, container.RemoveOptions{
+		err := du.dockerClient.ContainerRemove(c.id, container.RemoveOptions{
 			RemoveVolumes: false,
 			RemoveLinks:   false,
 			Force:         true,
@@ -57,7 +56,7 @@ func (du *DockerUtils) Close() error {
 }
 
 func (du *DockerUtils) pullImage(img string) error {
-	rc, err := du.dockerClient.ImagePull(du.ctx, img, image.PullOptions{})
+	rc, err := du.dockerClient.ImagePull(img, image.PullOptions{})
 	if err != nil {
 		du.logger.Error(fmt.Sprintf("failed to pull image %s : %s", img, err.Error()))
 		return err
@@ -85,11 +84,11 @@ func (du *DockerUtils) CreateContainer(image string) (*Container, error) {
 		return nil, err
 	}
 
-	resp, err := du.dockerClient.ContainerCreate(du.ctx, &container.Config{
+	resp, err := du.dockerClient.ContainerCreate(&container.Config{
 		Image: image,
 		Cmd:   []string{"sleep", "infinity"},
 		Tty:   false,
-	}, nil, nil, nil, "")
+	})
 	if err != nil {
 		du.logger.Error(fmt.Sprintf("failed to create container from '%s' : %s", image, err.Error()))
 		return nil, err
@@ -102,7 +101,7 @@ func (du *DockerUtils) CreateContainer(image string) (*Container, error) {
 	du.spawnedContainers = append(du.spawnedContainers, &c)
 
 	du.logger.Info(fmt.Sprintf("going to start container %s created from image %s", c.id, image))
-	if err := du.dockerClient.ContainerStart(du.ctx, c.id, container.StartOptions{}); err != nil {
+	if err := du.dockerClient.ContainerStart(c.id, container.StartOptions{}); err != nil {
 		du.logger.Error(fmt.Sprintf("failed to start container '%s' : %s", c.id, err.Error()))
 		return &c, err
 	}
@@ -116,20 +115,20 @@ func (du *DockerUtils) Exec(c *Container, cmd string) error {
 
 	shcmd := []string{"sh", "-c", cmd} // TODO @Miguel : this smells kinda bad
 
-	resp, err := du.dockerClient.ContainerExecCreate(du.ctx, c.id, container.ExecOptions{Cmd: shcmd, Env: c.Env(), Detach: false, AttachStderr: true, AttachStdout: true, WorkingDir: "/home"})
+	resp, err := du.dockerClient.ContainerExecCreate(c.id, container.ExecOptions{Cmd: shcmd, Env: c.Env(), Detach: false, AttachStderr: true, AttachStdout: true, WorkingDir: "/home"})
 	if err != nil {
 		du.logger.Error("failed to create exec operation on container %s : %s", c.id, err.Error())
 		return err
 	}
 
-	attachResp, err := du.dockerClient.ContainerExecAttach(du.ctx, resp.ID, container.ExecAttachOptions{})
+	attachResp, err := du.dockerClient.ContainerExecAttach(resp.ID, container.ExecAttachOptions{})
 	if err != nil {
 		du.logger.Error("failed to attach exec operation to container %s : %s", c.id, err.Error())
 		return err
 	}
 	defer attachResp.Close()
 
-	err = du.dockerClient.ContainerExecStart(du.ctx, resp.ID, container.ExecStartOptions{})
+	err = du.dockerClient.ContainerExecStart(resp.ID, container.ExecStartOptions{})
 	if err != nil {
 		du.logger.Error("failed to start exec operation on container %s : %s", c.id, err.Error())
 		return err
@@ -142,7 +141,7 @@ func (du *DockerUtils) Exec(c *Container, cmd string) error {
 	}
 
 	// TODO @Miguel : instead of writing to stdout and stderr, function should receive two params where to write
-	// TODO @Miguel : fetch and return exit code as well
+	// TODO @Miguel : fetch and return exit code as well (with ContainerExecInspect ?)
 
 	return nil
 }
@@ -154,7 +153,7 @@ func (du *DockerUtils) CopyTo(c *Container, srcPath, dstPath string) error {
 		return err
 	}
 
-	err = du.dockerClient.CopyToContainer(du.ctx, c.id, dstPath, buf, container.CopyToContainerOptions{})
+	err = du.dockerClient.CopyToContainer(c.id, dstPath, buf, container.CopyToContainerOptions{})
 	if err != nil {
 		return err
 	}
@@ -163,7 +162,7 @@ func (du *DockerUtils) CopyTo(c *Container, srcPath, dstPath string) error {
 }
 
 func (du *DockerUtils) CopyFrom(c *Container, srcPath, dstPath string) error {
-	rc, _, err := du.dockerClient.CopyFromContainer(du.ctx, c.id, srcPath)
+	rc, _, err := du.dockerClient.CopyFromContainer(c.id, srcPath)
 	if err != nil {
 		du.logger.Error(fmt.Sprintf("failed to copy %s from container %s : %s", srcPath, c.id, err.Error()))
 		return err

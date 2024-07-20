@@ -1,0 +1,14 @@
+version: '3'
+
+tasks:
+
+  generate:
+    description: "generate mocks"
+    cmds:
+      - go install go.uber.org/mock/mockgen@v0.4.0
+      - go generate ./...
+
+  test:
+    description: "run tests"
+    cmds:
+      - go test -coverprofile coverage.out -race ./...
