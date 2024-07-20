@@ -25,7 +25,12 @@ func main() {
 	}
 
 	container.AddEnv("help", "me")
-	err = du.Exec(container, "echo help=${help}")
+	err = du.Exec(container, "echo help=${help} > /home/tmp.txt")
+	if err != nil {
+		panic(err)
+	}
+
+	err = du.CopyFrom(container, "/home/tmp.txt", "./dummy")
 	if err != nil {
 		panic(err)
 	}
