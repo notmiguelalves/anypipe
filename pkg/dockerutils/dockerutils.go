@@ -3,11 +3,13 @@ package dockerutils
 import (
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"strings"
 
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 )
@@ -53,7 +55,35 @@ func (du *DockerUtils) Close() error {
 	return du.dockerClient.Close()
 }
 
+func (du *DockerUtils) pullImage(img string) error {
+	rc, err := du.dockerClient.ImagePull(du.ctx, img, image.PullOptions{})
+	if err != nil {
+		du.logger.Error(fmt.Sprintf("failed to pull image %s : %s", img, err.Error()))
+		return err
+	}
+	defer rc.Close()
+
+	bOut, err := io.ReadAll(rc)
+	if err != nil {
+		du.logger.Error(fmt.Sprintf("failed to read image pull output for %s : %s", img, err.Error()))
+		return err
+	}
+
+	lines := strings.Split(string(bOut), "\r\n")
+	for _, l := range lines {
+		du.logger.Info(strings.ReplaceAll(l, "\"", "'"))
+	}
+
+	return nil
+}
+
 func (du *DockerUtils) CreateContainer(image string) (*Container, error) {
+	err := du.pullImage(image)
+	if err != nil {
+		du.logger.Error(fmt.Sprintf("failed to pull image %s : %s", image, err.Error()))
+		return nil, err
+	}
+
 	resp, err := du.dockerClient.ContainerCreate(du.ctx, &container.Config{
 		Image: image,
 		Cmd:   []string{"sleep", "infinity"},
