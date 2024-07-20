@@ -12,8 +12,9 @@ import (
 )
 
 type DockerUtils struct {
-	ctx          context.Context
-	dockerClient *client.Client
+	ctx               context.Context
+	dockerClient      *client.Client
+	spawnedContainers []*Container
 }
 
 func New(ctx context.Context) (*DockerUtils, error) {
@@ -28,12 +29,24 @@ func New(ctx context.Context) (*DockerUtils, error) {
 	}, nil
 }
 
-func (nd *DockerUtils) Close() error {
-	return nd.dockerClient.Close()
+func (du *DockerUtils) Close() error {
+	for _, c := range du.spawnedContainers {
+		err := du.dockerClient.ContainerRemove(du.ctx, c.id, container.RemoveOptions{
+			RemoveVolumes: false,
+			RemoveLinks:   false,
+			Force:         true,
+		})
+
+		if err != nil {
+			fmt.Printf("failed to remove container %s: %s\n", c.id, err.Error())
+		}
+	}
+
+	return du.dockerClient.Close()
 }
 
-func (nd *DockerUtils) CreateContainer(image string) (*Container, error) {
-	resp, err := nd.dockerClient.ContainerCreate(nd.ctx, &container.Config{
+func (du *DockerUtils) CreateContainer(image string) (*Container, error) {
+	resp, err := du.dockerClient.ContainerCreate(du.ctx, &container.Config{
 		Image: image,
 		Cmd:   []string{"sleep", "infinity"},
 		Tty:   false,
@@ -43,8 +56,9 @@ func (nd *DockerUtils) CreateContainer(image string) (*Container, error) {
 	}
 
 	c := Container{id: resp.ID}
+	du.spawnedContainers = append(du.spawnedContainers, &c)
 
-	if err := nd.dockerClient.ContainerStart(nd.ctx, c.id, container.StartOptions{}); err != nil {
+	if err := du.dockerClient.ContainerStart(du.ctx, c.id, container.StartOptions{}); err != nil {
 		return &c, err
 	}
 
@@ -53,19 +67,19 @@ func (nd *DockerUtils) CreateContainer(image string) (*Container, error) {
 	return &c, nil
 }
 
-func (nd *DockerUtils) Exec(c *Container, cmd []string) error {
-	resp, err := nd.dockerClient.ContainerExecCreate(nd.ctx, c.id, container.ExecOptions{Cmd: cmd, Detach: false, AttachStderr: true, AttachStdout: true, WorkingDir: "/home"})
+func (du *DockerUtils) Exec(c *Container, cmd []string) error {
+	resp, err := du.dockerClient.ContainerExecCreate(du.ctx, c.id, container.ExecOptions{Cmd: cmd, Detach: false, AttachStderr: true, AttachStdout: true, WorkingDir: "/home"})
 	if err != nil {
 		return err
 	}
 
-	attachResp, err := nd.dockerClient.ContainerExecAttach(nd.ctx, resp.ID, container.ExecAttachOptions{})
+	attachResp, err := du.dockerClient.ContainerExecAttach(du.ctx, resp.ID, container.ExecAttachOptions{})
 	if err != nil {
 		return err
 	}
 	defer attachResp.Close()
 
-	err = nd.dockerClient.ContainerExecStart(nd.ctx, resp.ID, container.ExecStartOptions{})
+	err = du.dockerClient.ContainerExecStart(du.ctx, resp.ID, container.ExecStartOptions{})
 	if err != nil {
 		return err
 	}
