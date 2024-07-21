@@ -17,7 +17,7 @@ func sanitizeEnvKey(key string) string {
 func (c *Container) Env() []string {
 	env := []string{}
 	for key, value := range c.env {
-		env = append(env, fmt.Sprintf("%s=%s", key, value))
+		env = append(env, fmt.Sprintf("%s='%s'", key, value))
 	}
 
 	return env

@@ -12,8 +12,8 @@ import (
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
-	"github.com/notmiguelalves/anypipe/pkg/dockerutils/wrapper"
 	"github.com/notmiguelalves/anypipe/pkg/utils"
+	"github.com/notmiguelalves/anypipe/pkg/wrapper"
 )
 
 type DockerUtils struct {
@@ -33,6 +33,13 @@ func New(ctx context.Context, logger *slog.Logger) (*DockerUtils, error) {
 		dockerClient: cli,
 		logger:       logger,
 	}, nil
+}
+
+func NewWithClient(logger *slog.Logger, cli wrapper.DockerClient) *DockerUtils {
+	return &DockerUtils{
+		dockerClient: cli,
+		logger:       logger,
+	}
 }
 
 func (du *DockerUtils) Close() error {
