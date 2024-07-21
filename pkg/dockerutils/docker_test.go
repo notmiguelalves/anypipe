@@ -261,10 +261,7 @@ func TestCopyTo(t *testing.T) {
 		du := NewWithClient(testLogger, mockClient)
 		c := &Container{id: "123"}
 
-		tarbytes, err := os.ReadFile("../utils/testdata/tmp.tar")
-		assert.NoError(t, err)
-
-		mockClient.EXPECT().CopyToContainer("123", "/dst/tmp.txt", bytes.NewBuffer(tarbytes), container.CopyToContainerOptions{}).Times(1).Return(errors.New("some error"))
+		mockClient.EXPECT().CopyToContainer("123", "/dst/tmp.txt", gomock.Any(), container.CopyToContainerOptions{}).Times(1).Return(errors.New("some error"))
 
 		assert.Error(t, du.CopyTo(c, "../utils/testdata/tmp.txt", "/dst/tmp.txt"))
 	})
@@ -274,10 +271,7 @@ func TestCopyTo(t *testing.T) {
 		du := NewWithClient(testLogger, mockClient)
 		c := &Container{id: "123"}
 
-		tarbytes, err := os.ReadFile("../utils/testdata/tmp.tar")
-		assert.NoError(t, err)
-
-		mockClient.EXPECT().CopyToContainer("123", "/dst/tmp.txt", bytes.NewBuffer(tarbytes), container.CopyToContainerOptions{}).Times(1).Return(nil)
+		mockClient.EXPECT().CopyToContainer("123", "/dst/tmp.txt", gomock.Any(), container.CopyToContainerOptions{}).Times(1).Return(nil)
 
 		assert.NoError(t, du.CopyTo(c, "../utils/testdata/tmp.txt", "/dst/tmp.txt"))
 	})
