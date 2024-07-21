@@ -8,7 +8,12 @@ tasks:
       - go install go.uber.org/mock/mockgen@v0.4.0
       - go generate ./...
 
-  test:
-    description: "run tests"
+  test-all:
+    description: "run unit and integration tests"
+    cmds:
+      - go test -tags=integration -coverprofile coverage.out -race ./...
+  
+  test-short:
+    description: "run unit tests only"
     cmds:
       - go test -coverprofile coverage.out -race ./...

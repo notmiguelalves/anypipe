@@ -1,62 +1,50 @@
-package main
+//go:build integration
+
+package dockerutils_test
 
 import (
 	"context"
 	"log/slog"
 	"os"
+	"testing"
 
 	"github.com/notmiguelalves/anypipe/pkg/dockerutils"
+	"github.com/stretchr/testify/assert"
 )
 
-func main() {
+func TestDockeruritl(t *testing.T) {
 	ctx := context.Background()
+	assert.NoError(t, os.MkdirAll("testdata/integration", os.ModePerm))
+	defer os.RemoveAll("testdata/integration")
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
 
 	du, err := dockerutils.New(ctx, logger)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(t, err)
 	defer du.Close()
 
 	container, err := du.CreateContainer("docker.io/library/alpine")
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(t, err)
 
 	container.AddEnv("help", "me")
 	err = du.Exec(container, "echo help=${help} > /home/tmp.txt")
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(t, err)
 
-	err = du.CopyFrom(container, "/home/tmp.txt", "./dummy")
-	if err != nil {
-		panic(err)
-	}
+	err = du.CopyFrom(container, "/home/tmp.txt", "./testdata/integration")
+	assert.NoError(t, err)
 
 	err = du.Exec(container, "mkdir /dummy")
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(t, err)
 
-	err = du.CopyTo(container, "./dummy", "/dummy")
-	if err != nil {
-		panic(err)
-	}
+	err = du.CopyTo(container, "./testdata/integration", "/dummy")
+	assert.NoError(t, err)
 
 	err = du.Exec(container, "ls -l /")
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(t, err)
 
 	err = du.Exec(container, "ls -l /dummy")
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(t, err)
 
 	err = du.Exec(container, "cat /dummy/tmp.txt")
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(t, err)
 }
