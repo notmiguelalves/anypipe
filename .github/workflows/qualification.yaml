@@ -1,0 +1,26 @@
+name: Qualification
+
+on:
+  push:
+
+jobs:
+  qualification:
+    name: Qualification
+    runs-on: ubuntu-latest # TODO @Miguel : run on linux+mac+windows
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22.5'
+      
+      - name: Install Task
+        uses: arduino/setup-task@v2.0.0
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Unit and Integration tests
+        run: |
+          task test-all
