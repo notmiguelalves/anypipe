@@ -22,6 +22,7 @@ type DockerUtils struct {
 	spawnedContainers []*Container
 }
 
+// initializes a DockerUtils client - make sure to defer a call to Close() the client on exit
 func New(ctx context.Context, logger *slog.Logger) (*DockerUtils, error) {
 	cli, err := wrapper.NewClientWithOpts(ctx, client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
@@ -35,6 +36,7 @@ func New(ctx context.Context, logger *slog.Logger) (*DockerUtils, error) {
 	}, nil
 }
 
+// initialize a DockerUtils client while providing a pre-created Docker client
 func NewWithClient(logger *slog.Logger, cli wrapper.DockerClient) *DockerUtils {
 	return &DockerUtils{
 		dockerClient: cli,
@@ -42,6 +44,7 @@ func NewWithClient(logger *slog.Logger, cli wrapper.DockerClient) *DockerUtils {
 	}
 }
 
+// closes the DockerUtils client, and removes all containers created by the client during program execution
 func (du *DockerUtils) Close() error {
 	du.logger.Info("cleaning up spawned containers")
 
@@ -62,6 +65,7 @@ func (du *DockerUtils) Close() error {
 	return du.dockerClient.Close()
 }
 
+// pull an image by ref. returns 'nil' if succeeds or if image is already present
 func (du *DockerUtils) pullImage(img string) error {
 	rc, err := du.dockerClient.ImagePull(img, image.PullOptions{})
 	if err != nil {
@@ -84,6 +88,7 @@ func (du *DockerUtils) pullImage(img string) error {
 	return nil
 }
 
+// creates a container with the specified image
 func (du *DockerUtils) CreateContainer(image string) (*Container, error) {
 	err := du.pullImage(image)
 	if err != nil {
@@ -117,6 +122,7 @@ func (du *DockerUtils) CreateContainer(image string) (*Container, error) {
 	return &c, nil
 }
 
+// executes the specified command on the provided container. Note: command will be executed with `sh -c <command>`
 func (du *DockerUtils) Exec(c *Container, cmd string) (stdout, stderr *bytes.Buffer, exitcode int, err error) {
 	du.logger.Info(fmt.Sprintf("going to execute %s on container %s", cmd, c.id))
 
@@ -161,6 +167,7 @@ func (du *DockerUtils) Exec(c *Container, cmd string) (stdout, stderr *bytes.Buf
 	return
 }
 
+// copies a file or directory from the host to a container
 func (du *DockerUtils) CopyTo(c *Container, srcPath, dstPath string) error {
 	buf, err := utils.Tar(srcPath)
 	if err != nil {
@@ -176,6 +183,7 @@ func (du *DockerUtils) CopyTo(c *Container, srcPath, dstPath string) error {
 	return nil
 }
 
+// copies a file or directory from a container to the host
 func (du *DockerUtils) CopyFrom(c *Container, srcPath, dstPath string) error {
 	rc, _, err := du.dockerClient.CopyFromContainer(c.id, srcPath)
 	if err != nil {

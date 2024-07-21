@@ -2,6 +2,8 @@ name: Qualification
 
 on:
   push:
+    branches-ignore:
+      - main
 
 jobs:
   qualification:
@@ -24,3 +26,8 @@ jobs:
       - name: Unit and Integration tests
         run: |
           task test-all
+
+      - name: Code Coverage Job Summary
+        uses: notmiguelalves/go-coverage-summary@v0.1.0
+        with:
+          coverage-file: "coverage.out"
