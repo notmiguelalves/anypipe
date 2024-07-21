@@ -101,6 +101,21 @@ func (mr *MockDockerClientMockRecorder) ContainerExecCreate(container, options a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ContainerExecCreate", reflect.TypeOf((*MockDockerClient)(nil).ContainerExecCreate), container, options)
 }
 
+// ContainerExecInspect mocks base method.
+func (m *MockDockerClient) ContainerExecInspect(execID string) (container.ExecInspect, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ContainerExecInspect", execID)
+	ret0, _ := ret[0].(container.ExecInspect)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ContainerExecInspect indicates an expected call of ContainerExecInspect.
+func (mr *MockDockerClientMockRecorder) ContainerExecInspect(execID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ContainerExecInspect", reflect.TypeOf((*MockDockerClient)(nil).ContainerExecInspect), execID)
+}
+
 // ContainerExecStart mocks base method.
 func (m *MockDockerClient) ContainerExecStart(execID string, config container.ExecStartOptions) error {
 	m.ctrl.T.Helper()

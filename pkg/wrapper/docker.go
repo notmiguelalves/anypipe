@@ -20,6 +20,7 @@ type DockerClient interface {
 	ContainerExecCreate(container string, options container.ExecOptions) (types.IDResponse, error)
 	ContainerExecAttach(execID string, config container.ExecAttachOptions) (types.HijackedResponse, error)
 	ContainerExecStart(execID string, config container.ExecStartOptions) error
+	ContainerExecInspect(execID string) (container.ExecInspect, error)
 	CopyToContainer(containerID, dstPath string, content io.Reader, options container.CopyToContainerOptions) error
 	CopyFromContainer(containerID, srcPath string) (io.ReadCloser, container.PathStat, error)
 	Close() error
@@ -68,6 +69,10 @@ func (wc *WrapperClient) ContainerExecAttach(execID string, config container.Exe
 
 func (wc *WrapperClient) ContainerExecStart(execID string, config container.ExecStartOptions) error {
 	return wc.dockerClient.ContainerExecStart(wc.ctx, execID, config)
+}
+
+func (wc *WrapperClient) ContainerExecInspect(execID string) (container.ExecInspect, error) {
+	return wc.dockerClient.ContainerExecInspect(wc.ctx, execID)
 }
 
 func (wc *WrapperClient) CopyToContainer(containerID, dstPath string, content io.Reader, options container.CopyToContainerOptions) error {

@@ -178,7 +178,8 @@ func TestExec(t *testing.T) {
 
 		mockClient.EXPECT().ContainerExecCreate("123", gomock.Any()).Times(1).Return(createResp, errors.New("some error"))
 
-		assert.Error(t, du.Exec(c, "echo test"))
+		_, _, _, err := du.Exec(c, "echo test")
+		assert.Error(t, err)
 	})
 
 	t.Run("failed to attach to container", func(t *testing.T) {
@@ -191,7 +192,8 @@ func TestExec(t *testing.T) {
 		mockClient.EXPECT().ContainerExecCreate("123", gomock.Any()).Times(1).Return(createResp, nil)
 		mockClient.EXPECT().ContainerExecAttach(createResp.ID, gomock.Any()).Times(1).Return(attachResp, errors.New("some error"))
 
-		assert.Error(t, du.Exec(c, "echo test"))
+		_, _, _, err := du.Exec(c, "echo test")
+		assert.Error(t, err)
 	})
 
 	t.Run("failed to start exec operation", func(t *testing.T) {
@@ -207,7 +209,27 @@ func TestExec(t *testing.T) {
 		mockClient.EXPECT().ContainerExecAttach(createResp.ID, gomock.Any()).Times(1).Return(attachResp, nil)
 		mockClient.EXPECT().ContainerExecStart(createResp.ID, gomock.Any()).Times(1).Return(errors.New("some error"))
 
-		assert.Error(t, du.Exec(c, "echo test"))
+		_, _, _, err := du.Exec(c, "echo test")
+		assert.Error(t, err)
+	})
+
+	t.Run("failed to inspect exec operation", func(t *testing.T) {
+		mockClient := wrapper.NewMockDockerClient(ctrl)
+		du := NewWithClient(testLogger, mockClient)
+		c := &Container{id: "123"}
+		createResp := types.IDResponse{ID: "777"}
+		conn1, conn2 := net.Pipe() // a bit of an ugly way to get a dummy/mock net.Conn
+		defer conn2.Close()
+		buf := bytes.Buffer{}
+		attachResp := types.HijackedResponse{Conn: conn1, Reader: bufio.NewReader(&buf)}
+
+		mockClient.EXPECT().ContainerExecCreate("123", gomock.Any()).Times(1).Return(createResp, nil)
+		mockClient.EXPECT().ContainerExecAttach(createResp.ID, gomock.Any()).Times(1).Return(attachResp, nil)
+		mockClient.EXPECT().ContainerExecStart(createResp.ID, gomock.Any()).Times(1).Return(nil)
+		mockClient.EXPECT().ContainerExecInspect(createResp.ID).Times(1).Return(container.ExecInspect{}, errors.New("some error"))
+
+		_, _, _, err := du.Exec(c, "echo test")
+		assert.Error(t, err)
 	})
 
 	t.Run("happy path", func(t *testing.T) {
@@ -223,8 +245,10 @@ func TestExec(t *testing.T) {
 		mockClient.EXPECT().ContainerExecCreate("123", gomock.Any()).Times(1).Return(createResp, nil)
 		mockClient.EXPECT().ContainerExecAttach(createResp.ID, gomock.Any()).Times(1).Return(attachResp, nil)
 		mockClient.EXPECT().ContainerExecStart(createResp.ID, gomock.Any()).Times(1).Return(nil)
+		mockClient.EXPECT().ContainerExecInspect(createResp.ID).Times(1).Return(container.ExecInspect{}, nil)
 
-		assert.NoError(t, du.Exec(c, "echo test"))
+		_, _, _, err := du.Exec(c, "echo test")
+		assert.NoError(t, err)
 	})
 }
 

@@ -1,11 +1,11 @@
 package dockerutils
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
 	"log/slog"
-	"os"
 	"strings"
 
 	"github.com/docker/docker/api/types/container"
@@ -117,7 +117,7 @@ func (du *DockerUtils) CreateContainer(image string) (*Container, error) {
 	return &c, nil
 }
 
-func (du *DockerUtils) Exec(c *Container, cmd string) error {
+func (du *DockerUtils) Exec(c *Container, cmd string) (stdout, stderr *bytes.Buffer, exitcode int, err error) {
 	du.logger.Info(fmt.Sprintf("going to execute %s on container %s", cmd, c.id))
 
 	shcmd := []string{"sh", "-c", cmd} // TODO @Miguel : this smells kinda bad
@@ -125,32 +125,40 @@ func (du *DockerUtils) Exec(c *Container, cmd string) error {
 	resp, err := du.dockerClient.ContainerExecCreate(c.id, container.ExecOptions{Cmd: shcmd, Env: c.Env(), Detach: false, AttachStderr: true, AttachStdout: true, WorkingDir: "/home"})
 	if err != nil {
 		du.logger.Error("failed to create exec operation on container %s : %s", c.id, err.Error())
-		return err
+		return
 	}
 
 	attachResp, err := du.dockerClient.ContainerExecAttach(resp.ID, container.ExecAttachOptions{})
 	if err != nil {
 		du.logger.Error("failed to attach exec operation to container %s : %s", c.id, err.Error())
-		return err
+		return
 	}
 	defer attachResp.Close()
 
 	err = du.dockerClient.ContainerExecStart(resp.ID, container.ExecStartOptions{})
 	if err != nil {
 		du.logger.Error("failed to start exec operation on container %s : %s", c.id, err.Error())
-		return err
+		return
 	}
 
-	_, err = stdcopy.StdCopy(os.Stdout, os.Stderr, attachResp.Reader)
+	stdout = bytes.NewBuffer([]byte{})
+	stderr = bytes.NewBuffer([]byte{})
+
+	_, err = stdcopy.StdCopy(stdout, stderr, attachResp.Reader)
 	if err != nil {
 		du.logger.Error(fmt.Sprintf("failed to fetch container stdout/stderr from container %s : %s", c.id, err.Error()))
-		return err
+		return
 	}
 
-	// TODO @Miguel : instead of writing to stdout and stderr, function should receive two params where to write
-	// TODO @Miguel : fetch and return exit code as well (with ContainerExecInspect ?)
+	execInfo, err := du.dockerClient.ContainerExecInspect(resp.ID)
+	if err != nil {
+		du.logger.Error(fmt.Sprintf("failed to inspect container exec operation for %s : %s", c.id, err.Error()))
+		return
+	}
 
-	return nil
+	exitcode = execInfo.ExitCode
+
+	return
 }
 
 func (du *DockerUtils) CopyTo(c *Container, srcPath, dstPath string) error {
