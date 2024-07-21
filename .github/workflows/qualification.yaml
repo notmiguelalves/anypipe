@@ -24,6 +24,12 @@ jobs:
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Setup docker
+        if: runner.os == 'macos'
+        run: |
+          brew install docker
+          colima start
+
       - name: Unit and Integration tests
         run: |
           task test-all
