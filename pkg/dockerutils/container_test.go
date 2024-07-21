@@ -79,7 +79,7 @@ func TestEnv(t *testing.T) {
 
 	for _, tc := range testcases {
 		res := tc.input.Env()
-		assert.Equal(t, tc.expectedOutput, res)
+		assert.EqualValues(t, tc.expectedOutput, res)
 	}
 }
 
