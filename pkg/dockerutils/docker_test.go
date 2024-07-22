@@ -316,3 +316,43 @@ func TestCopyFrom(t *testing.T) {
 		assert.Equal(t, expected, result)
 	})
 }
+
+func TestCopyBetweenContainers(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	testLogger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+
+	t.Run("failed on copy from", func(t *testing.T) {
+		mockClient := wrapper.NewMockDockerClient(ctrl)
+		du := NewWithClient(testLogger, mockClient)
+		c1 := &Container{id: "1"}
+		c2 := &Container{id: "2"}
+
+		mockClient.EXPECT().CopyFromContainer("1", "/home/somefile").Times(1).Return(nil, container.PathStat{}, errors.New("some error"))
+
+		assert.Error(t, du.CopyBetweenContainers(c1, c2, "/home/somefile", "/home"))
+	})
+
+	t.Run("failed on copy to", func(t *testing.T) {
+		mockClient := wrapper.NewMockDockerClient(ctrl)
+		du := NewWithClient(testLogger, mockClient)
+		c1 := &Container{id: "1"}
+		c2 := &Container{id: "2"}
+
+		mockClient.EXPECT().CopyFromContainer("1", "/home/somefile").Times(1).Return(nil, container.PathStat{}, nil)
+		mockClient.EXPECT().CopyToContainer("2", "/home", gomock.Any(), container.CopyToContainerOptions{}).Times(1).Return(errors.New("some error"))
+
+		assert.Error(t, du.CopyBetweenContainers(c1, c2, "/home/somefile", "/home"))
+	})
+
+	t.Run("happy path", func(t *testing.T) {
+		mockClient := wrapper.NewMockDockerClient(ctrl)
+		du := NewWithClient(testLogger, mockClient)
+		c1 := &Container{id: "1"}
+		c2 := &Container{id: "2"}
+
+		mockClient.EXPECT().CopyFromContainer("1", "/home/somefile").Times(1).Return(nil, container.PathStat{}, nil)
+		mockClient.EXPECT().CopyToContainer("2", "/home", gomock.Any(), container.CopyToContainerOptions{}).Times(1).Return(nil)
+
+		assert.NoError(t, du.CopyBetweenContainers(c1, c2, "/home/somefile", "/home"))
+	})
+}
