@@ -177,6 +177,7 @@ func (du *DockerUtils) CopyTo(c *Container, srcPath, dstPath string) error {
 
 	err = du.dockerClient.CopyToContainer(c.id, dstPath, buf, container.CopyToContainerOptions{})
 	if err != nil {
+		du.logger.Error(fmt.Sprintf("failed to copy %s to container %s : %s", srcPath, c.id, err.Error()))
 		return err
 	}
 
@@ -194,6 +195,23 @@ func (du *DockerUtils) CopyFrom(c *Container, srcPath, dstPath string) error {
 	err = utils.Untar(rc, dstPath)
 	if err != nil {
 		du.logger.Error(fmt.Sprintf("failed to untar %s : %s", srcPath, err.Error()))
+		return err
+	}
+
+	return nil
+}
+
+// copies a file or directory between two containers
+func (du *DockerUtils) CopyBetweenContainers(srcContainer, destContainer *Container, srcPath, dstPath string) error {
+	rc, _, err := du.dockerClient.CopyFromContainer(srcContainer.id, srcPath)
+	if err != nil {
+		du.logger.Error(fmt.Sprintf("failed to copy %s from container %s : %s", srcPath, srcContainer.id, err.Error()))
+		return err
+	}
+
+	err = du.dockerClient.CopyToContainer(destContainer.id, dstPath, rc, container.CopyToContainerOptions{})
+	if err != nil {
+		du.logger.Error(fmt.Sprintf("failed to copy %s to container %s : %s", srcPath, destContainer.id, err.Error()))
 		return err
 	}
 

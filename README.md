@@ -3,7 +3,7 @@
 Portable pipelines with minimal dependencies.
 
 ### Why?
-After some (*a lot of*) frustrations trying to use Dagger.io in production environments with strict security policies, decided to try and make something with minimal dependencies and requirements.
+After some (*a lot of*) frustrations trying to use Dagger in production environments with strict security policies, decided to try and make something with minimal dependencies and requirements.
 
 `Let's see if it actually turns out that way :)`
 

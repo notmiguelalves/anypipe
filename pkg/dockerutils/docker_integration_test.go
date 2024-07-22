@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDockeruritl(t *testing.T) {
+func TestDockerutilBase(t *testing.T) {
 	ctx := context.Background()
 	assert.NoError(t, os.MkdirAll("testdata/integration", os.ModePerm))
 	defer os.RemoveAll("testdata/integration")
@@ -65,4 +65,23 @@ func TestDockeruritl(t *testing.T) {
 	assert.Equal(t, "", stdout.String())
 	assert.Equal(t, "ls: somebaddir123: No such file or directory\n", stderr.String())
 
+	newContainer, err := du.CreateContainer("docker.io/library/alpine")
+	assert.NoError(t, err)
+
+	err = du.CopyBetweenContainers(container, newContainer, "/dummy/tmp.txt", "/")
+	assert.NoError(t, err)
+
+	stdout, stderr, ec, err = du.Exec(newContainer, "cat /tmp.txt")
+	assert.NoError(t, err)
+	assert.Equal(t, 0, ec)
+	assert.Equal(t, "help='me'\n", stdout.String())
+	assert.Equal(t, "", stderr.String())
+
+	_, _, ec, err = du.Exec(newContainer, "apk add curl")
+	assert.NoError(t, err)
+	assert.Equal(t, 0, ec)
+
+	_, _, ec, err = du.Exec(newContainer, "curl https://google.com")
+	assert.NoError(t, err)
+	assert.Equal(t, 0, ec)
 }
