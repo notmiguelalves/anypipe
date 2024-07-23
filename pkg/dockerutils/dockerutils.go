@@ -16,36 +16,46 @@ import (
 	"github.com/notmiguelalves/anypipe/pkg/wrapper"
 )
 
-type DockerUtils struct {
+//go:generate mockgen -destination=dockerutils_mock.go -package=dockerutils -source=dockerutils.go DockerUtils
+type DockerUtils interface {
+	Close() error
+	CreateContainer(image string) (*Container, error)
+	Exec(c *Container, cmd string) (stdout, stderr *bytes.Buffer, exitcode int, err error)
+	CopyTo(c *Container, srcPath, dstPath string) error
+	CopyFrom(c *Container, srcPath, dstPath string) error
+	CopyBetweenContainers(srcContainer, destContainer *Container, srcPath, dstPath string) error
+}
+
+type DockerUtilsImpl struct {
 	logger            *slog.Logger
 	dockerClient      wrapper.DockerClient
 	spawnedContainers []*Container
 }
 
 // initializes a DockerUtils client - make sure to defer a call to Close() the client on exit
-func New(ctx context.Context, logger *slog.Logger) (*DockerUtils, error) {
+func New(ctx context.Context, logger *slog.Logger) (*DockerUtilsImpl, error) {
 	cli, err := wrapper.NewClientWithOpts(ctx, client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		logger.Error(fmt.Sprintf("failed to initialize docker client: %s", err.Error()))
 		return nil, err
 	}
 
-	return &DockerUtils{
+	return &DockerUtilsImpl{
 		dockerClient: cli,
 		logger:       logger,
 	}, nil
 }
 
 // initialize a DockerUtils client while providing a pre-created Docker client
-func NewWithClient(logger *slog.Logger, cli wrapper.DockerClient) *DockerUtils {
-	return &DockerUtils{
+func NewWithClient(logger *slog.Logger, cli wrapper.DockerClient) *DockerUtilsImpl {
+	return &DockerUtilsImpl{
 		dockerClient: cli,
 		logger:       logger,
 	}
 }
 
 // closes the DockerUtils client, and removes all containers created by the client during program execution
-func (du *DockerUtils) Close() error {
+func (du *DockerUtilsImpl) Close() error {
 	du.logger.Info("cleaning up spawned containers")
 
 	for _, c := range du.spawnedContainers {
@@ -66,7 +76,7 @@ func (du *DockerUtils) Close() error {
 }
 
 // pull an image by ref. returns 'nil' if succeeds or if image is already present
-func (du *DockerUtils) pullImage(img string) error {
+func (du *DockerUtilsImpl) pullImage(img string) error {
 	rc, err := du.dockerClient.ImagePull(img, image.PullOptions{})
 	if err != nil {
 		du.logger.Error(fmt.Sprintf("failed to pull image %s : %s", img, err.Error()))
@@ -89,7 +99,7 @@ func (du *DockerUtils) pullImage(img string) error {
 }
 
 // creates a container with the specified image
-func (du *DockerUtils) CreateContainer(image string) (*Container, error) {
+func (du *DockerUtilsImpl) CreateContainer(image string) (*Container, error) {
 	err := du.pullImage(image)
 	if err != nil {
 		du.logger.Error(fmt.Sprintf("failed to pull image %s : %s", image, err.Error()))
@@ -123,7 +133,7 @@ func (du *DockerUtils) CreateContainer(image string) (*Container, error) {
 }
 
 // executes the specified command on the provided container. Note: command will be executed with `sh -c <command>`
-func (du *DockerUtils) Exec(c *Container, cmd string) (stdout, stderr *bytes.Buffer, exitcode int, err error) {
+func (du *DockerUtilsImpl) Exec(c *Container, cmd string) (stdout, stderr *bytes.Buffer, exitcode int, err error) {
 	du.logger.Info(fmt.Sprintf("going to execute %s on container %s", cmd, c.id))
 
 	shcmd := []string{"sh", "-c", cmd} // TODO @Miguel : this smells kinda bad
@@ -168,7 +178,7 @@ func (du *DockerUtils) Exec(c *Container, cmd string) (stdout, stderr *bytes.Buf
 }
 
 // copies a file or directory from the host to a container
-func (du *DockerUtils) CopyTo(c *Container, srcPath, dstPath string) error {
+func (du *DockerUtilsImpl) CopyTo(c *Container, srcPath, dstPath string) error {
 	buf, err := utils.Tar(srcPath)
 	if err != nil {
 		du.logger.Error(fmt.Sprintf("failed to tar %s : %s", srcPath, err.Error()))
@@ -185,7 +195,7 @@ func (du *DockerUtils) CopyTo(c *Container, srcPath, dstPath string) error {
 }
 
 // copies a file or directory from a container to the host
-func (du *DockerUtils) CopyFrom(c *Container, srcPath, dstPath string) error {
+func (du *DockerUtilsImpl) CopyFrom(c *Container, srcPath, dstPath string) error {
 	rc, _, err := du.dockerClient.CopyFromContainer(c.id, srcPath)
 	if err != nil {
 		du.logger.Error(fmt.Sprintf("failed to copy %s from container %s : %s", srcPath, c.id, err.Error()))
@@ -202,7 +212,7 @@ func (du *DockerUtils) CopyFrom(c *Container, srcPath, dstPath string) error {
 }
 
 // copies a file or directory between two containers
-func (du *DockerUtils) CopyBetweenContainers(srcContainer, destContainer *Container, srcPath, dstPath string) error {
+func (du *DockerUtilsImpl) CopyBetweenContainers(srcContainer, destContainer *Container, srcPath, dstPath string) error {
 	rc, _, err := du.dockerClient.CopyFromContainer(srcContainer.id, srcPath)
 	if err != nil {
 		du.logger.Error(fmt.Sprintf("failed to copy %s from container %s : %s", srcPath, srcContainer.id, err.Error()))

@@ -1,7 +1,5 @@
 package wrapper
 
-//go:generate mockgen -destination=docker_mock.go -package=wrapper -source=docker.go DockerClient
-
 import (
 	"context"
 	"io"
@@ -12,6 +10,7 @@ import (
 	"github.com/docker/docker/client"
 )
 
+//go:generate mockgen -destination=docker_mock.go -package=wrapper -source=docker.go DockerClient
 type DockerClient interface {
 	ContainerRemove(containerID string, options container.RemoveOptions) error
 	ImagePull(refStr string, options image.PullOptions) (io.ReadCloser, error)
