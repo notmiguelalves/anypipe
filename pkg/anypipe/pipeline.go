@@ -8,8 +8,8 @@ import (
 )
 
 type Anypipe interface {
-	WithJob(job Job) Anypipe
-	Run(inputs map[string]interface{}) error
+	WithSequentialJobs(jobs ...Job) Anypipe
+	Run(variables map[string]interface{}) error
 }
 
 type AnypipeImpl struct {
@@ -28,26 +28,24 @@ func NewPipelineImpl(ctx context.Context, log *slog.Logger, name string) Anypipe
 	}
 }
 
-func (p *AnypipeImpl) WithJob(job Job) Anypipe {
-	p.Jobs = append(p.Jobs, job)
+func (p *AnypipeImpl) WithSequentialJobs(jobs ...Job) Anypipe {
+	p.Jobs = append(p.Jobs, jobs...)
 
 	return p
 }
 
-func (p *AnypipeImpl) Run(inputs map[string]interface{}) error {
+func (p *AnypipeImpl) Run(variables map[string]interface{}) error {
 	du, err := dockerutils.New(p.ctx, p.log)
 	if err != nil {
 		return err
 	}
 	defer du.Close()
 
-	nextInputs := inputs
 	for _, job := range p.Jobs {
-		outputs, err := job.Run(p.log, du, nextInputs)
+		err := job.Run(p.log, du, variables)
 		if err != nil {
 			return err
 		}
-		nextInputs = outputs
 	}
 
 	return nil

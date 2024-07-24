@@ -8,7 +8,7 @@ import (
 
 type Job interface {
 	WithStep(stepName string, f StepFunc) Job
-	Run(log *slog.Logger, du dockerutils.DockerUtils, inputs map[string]interface{}) (outputs map[string]interface{}, err error)
+	Run(log *slog.Logger, du dockerutils.DockerUtils, variables map[string]interface{}) error
 }
 
 type JobImpl struct {
@@ -34,22 +34,19 @@ func (j *JobImpl) WithStep(stepName string, f StepFunc) Job {
 
 func (j *JobImpl) Run(log *slog.Logger,
 	du dockerutils.DockerUtils,
-	inputs map[string]interface{}) (outputs map[string]interface{}, err error) {
+	variables map[string]interface{}) error {
 
 	c, err := du.CreateContainer(j.ImageRef)
 	if err != nil {
-		return map[string]interface{}{}, err
+		return err
 	}
 
-	nextInputs := inputs
 	for _, step := range j.Steps {
-		outputs, err := step.Run(log, du, c, nextInputs)
+		err := step.Run(log, du, c, variables)
 		if err != nil {
-			return outputs, err
+			return err
 		}
-
-		nextInputs = outputs
 	}
 
-	return map[string]interface{}{}, nil
+	return nil
 }

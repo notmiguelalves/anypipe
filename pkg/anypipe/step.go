@@ -6,10 +6,10 @@ import (
 	"github.com/notmiguelalves/anypipe/pkg/dockerutils"
 )
 
-type StepFunc func(du dockerutils.DockerUtils, c *dockerutils.Container, inputs map[string]interface{}) (outputs map[string]interface{}, err error)
+type StepFunc func(du dockerutils.DockerUtils, c *dockerutils.Container, variables map[string]interface{}) error
 
 type Step interface {
-	Run(log *slog.Logger, du dockerutils.DockerUtils, c *dockerutils.Container, inputs map[string]interface{}) (outputs map[string]interface{}, err error)
+	Run(log *slog.Logger, du dockerutils.DockerUtils, c *dockerutils.Container, variables map[string]interface{}) error
 }
 
 type StepImpl struct {
@@ -24,13 +24,10 @@ func NewStepImpl(name string, impl StepFunc) Step {
 	}
 }
 
-// TODO @Miguel : instead of inputs and outputs, lets just have a map for 'shared' stuff, that is passed
-// as argument via pointer
-
 func (s *StepImpl) Run(log *slog.Logger,
 	du dockerutils.DockerUtils,
 	c *dockerutils.Container,
-	inputs map[string]interface{}) (outputs map[string]interface{}, err error) {
+	variables map[string]interface{}) error {
 
-	return s.Impl(du, c, inputs)
+	return s.Impl(du, c, variables)
 }

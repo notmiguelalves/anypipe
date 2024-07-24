@@ -15,28 +15,29 @@ import (
 
 func TestAnypipe(t *testing.T) {
 
-	f1 := func(du dockerutils.DockerUtils, c *dockerutils.Container, inputs map[string]interface{}) (outputs map[string]interface{}, err error) {
-		outputs = map[string]interface{}{}
+	f1 := func(du dockerutils.DockerUtils, c *dockerutils.Container, variables map[string]interface{}) error {
+		variables["out_file"] = "f1.txt"
 
-		_, _, _, err = du.Exec(c, "echo 'Hello World!'")
-		outputs["test_output"] = "this is an output"
-
-		return
+		_, _, _, err := du.Exec(c, "echo 'test data' > f1.txt")
+		return err
 	}
 
-	f2 := func(du dockerutils.DockerUtils, c *dockerutils.Container, inputs map[string]interface{}) (outputs map[string]interface{}, err error) {
-		outputs = map[string]interface{}{}
+	f2 := func(du dockerutils.DockerUtils, c *dockerutils.Container, variables map[string]interface{}) error {
+		file, ok := variables["out_file"].(string)
+		if !ok {
+			return errors.New("unable to cast 'out_file' to string")
+		}
 
-		stdout, _, _, err := du.Exec(c, fmt.Sprintf("echo '%s'", inputs["test_output"].(string)))
+		stdout, _, _, err := du.Exec(c, fmt.Sprintf("cat %s", file))
 		if err != nil {
-			return
+			return err
 		}
 
-		if !strings.Contains(stdout.String(), "this is an output") {
-			err = errors.New("expected inputs[test_output] to contain 'this is an output'")
+		if !strings.Contains(stdout.String(), "test data") {
+			return errors.New("expected file to contain 'test data'")
 		}
 
-		return
+		return nil
 	}
 
 	ctx := context.Background()
@@ -44,7 +45,7 @@ func TestAnypipe(t *testing.T) {
 
 	pipeline := NewPipelineImpl(ctx, logger, "test_pipeline")
 
-	pipeline.WithJob(
+	pipeline.WithSequentialJobs(
 		NewJobImpl("test_job_1", "alpine:latest").
 			WithStep("step1", f1).
 			WithStep("step2", f2),
