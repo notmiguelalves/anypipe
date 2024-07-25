@@ -33,6 +33,10 @@ func (j *JobImpl) WithStep(stepName string, f StepFunc) Job {
 	return j
 }
 
+// TODO @Miguel : RUN function should return result of all steps that executed
+//   - steps that did not even execute
+//
+// should also keep track of how long each step takes to run
 func (j *JobImpl) Run(log *slog.Logger,
 	du dockerutils.DockerUtils,
 	variables map[string]interface{}) error {
