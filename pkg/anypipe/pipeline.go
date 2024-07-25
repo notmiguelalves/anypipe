@@ -2,6 +2,7 @@ package anypipe
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	"github.com/notmiguelalves/anypipe/pkg/dockerutils"
@@ -35,6 +36,7 @@ func (p *AnypipeImpl) WithSequentialJobs(jobs ...Job) Anypipe {
 }
 
 func (p *AnypipeImpl) Run(variables map[string]interface{}) error {
+	p.log.Info(fmt.Sprintf("starting pipeline %s", p.Name))
 	du, err := dockerutils.New(p.ctx, p.log)
 	if err != nil {
 		return err

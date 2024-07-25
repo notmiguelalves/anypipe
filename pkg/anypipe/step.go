@@ -1,6 +1,7 @@
 package anypipe
 
 import (
+	"fmt"
 	"log/slog"
 
 	"github.com/notmiguelalves/anypipe/pkg/dockerutils"
@@ -29,5 +30,6 @@ func (s *StepImpl) Run(log *slog.Logger,
 	c *dockerutils.Container,
 	variables map[string]interface{}) error {
 
+	log.Info(fmt.Sprintf("running step %s", s.Name))
 	return s.Impl(du, c, variables)
 }

@@ -1,6 +1,7 @@
 package anypipe
 
 import (
+	"fmt"
 	"log/slog"
 
 	"github.com/notmiguelalves/anypipe/pkg/dockerutils"
@@ -35,6 +36,8 @@ func (j *JobImpl) WithStep(stepName string, f StepFunc) Job {
 func (j *JobImpl) Run(log *slog.Logger,
 	du dockerutils.DockerUtils,
 	variables map[string]interface{}) error {
+
+	log.Info(fmt.Sprintf("starting job %s", j.Name))
 
 	c, err := du.CreateContainer(j.ImageRef)
 	if err != nil {

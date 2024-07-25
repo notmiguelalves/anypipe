@@ -56,10 +56,10 @@ func NewWithClient(logger *slog.Logger, cli wrapper.DockerClient) *DockerUtilsIm
 
 // closes the DockerUtils client, and removes all containers created by the client during program execution
 func (du *DockerUtilsImpl) Close() error {
-	du.logger.Info("cleaning up spawned containers")
+	du.logger.Debug("cleaning up spawned containers")
 
 	for _, c := range du.spawnedContainers {
-		du.logger.Info(fmt.Sprintf("going to cleanup %s", c.id))
+		du.logger.Debug(fmt.Sprintf("going to cleanup %s", c.id))
 
 		err := du.dockerClient.ContainerRemove(c.id, container.RemoveOptions{
 			RemoveVolumes: false,
@@ -92,7 +92,7 @@ func (du *DockerUtilsImpl) pullImage(img string) error {
 
 	lines := strings.Split(string(bOut), "\r\n")
 	for _, l := range lines {
-		du.logger.Info(strings.ReplaceAll(l, "\"", "'"))
+		du.logger.Debug(strings.ReplaceAll(l, "\"", "'"))
 	}
 
 	return nil
@@ -122,19 +122,19 @@ func (du *DockerUtilsImpl) CreateContainer(image string) (*Container, error) {
 	}
 	du.spawnedContainers = append(du.spawnedContainers, &c)
 
-	du.logger.Info(fmt.Sprintf("going to start container %s created from image %s", c.id, image))
+	du.logger.Debug(fmt.Sprintf("going to start container %s created from image %s", c.id, image))
 	if err := du.dockerClient.ContainerStart(c.id, container.StartOptions{}); err != nil {
 		du.logger.Error(fmt.Sprintf("failed to start container '%s' : %s", c.id, err.Error()))
 		return &c, err
 	}
 
-	du.logger.Info(fmt.Sprintf("started container %s", c.id))
+	du.logger.Debug(fmt.Sprintf("started container %s", c.id))
 	return &c, nil
 }
 
 // executes the specified command on the provided container. Note: command will be executed with `sh -c <command>`
 func (du *DockerUtilsImpl) Exec(c *Container, cmd string) (stdout, stderr *bytes.Buffer, exitcode int, err error) {
-	du.logger.Info(fmt.Sprintf("going to execute %s on container %s", cmd, c.id))
+	du.logger.Debug(fmt.Sprintf("going to execute %s on container %s", cmd, c.id))
 
 	shcmd := []string{"sh", "-c", cmd} // TODO @Miguel : this smells kinda bad
 
