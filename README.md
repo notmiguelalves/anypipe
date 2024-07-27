@@ -12,6 +12,8 @@ An abstraction for pipeline/job/step definitions, integrated with a wrapper arou
 
 `go get github.com/notmiguelalves/anypipe@vX.Y.Z` - Then you can leverage the pipeline abstractions and the docker utilities. To see an end-to-end example on how it is used I'd recommend having a looking at the integration tests :[pipeline abstractions](pkg/anypipe/pipeline_integration_test.go) and [docker utilities](pkg/dockerutils/docker_integration_test.go).
 
+The `dockerutils` package is essentially a wrapper on top of Docker's Golang API, offering some higher level abstractions for container life-cycle management, file transfer between **host-container** and **container-container**, and command execution.
+
 The `anypipe` package offers ways to define pipelines in code:
 
 ```go
@@ -45,6 +47,4 @@ When execution finishes (regardless if success or error) it outputs an overview 
 | --- | --- | --- |
 | PASS | step1 | 38.608751ms |
 | PASS | step2 | 33.878416ms |
-
-The `dockerutils` is essentially a wrapper on top of Docker's Golang API, offering some higher level abstractions for container life-cycle management, file transfer between host<->container and container<->container, and command execution.
 
