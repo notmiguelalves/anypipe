@@ -11,6 +11,7 @@ type StepFunc func(du dockerutils.DockerUtils, c *dockerutils.Container, variabl
 
 type Step interface {
 	Run(log *slog.Logger, du dockerutils.DockerUtils, c *dockerutils.Container, variables map[string]interface{}) error
+	GetName() string
 }
 
 type StepImpl struct {
@@ -32,4 +33,8 @@ func (s *StepImpl) Run(log *slog.Logger,
 
 	log.Info(fmt.Sprintf("running step %s", s.Name))
 	return s.Impl(du, c, variables)
+}
+
+func (s *StepImpl) GetName() string {
+	return s.Name
 }

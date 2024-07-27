@@ -35,8 +35,6 @@ func (p *AnypipeImpl) WithSequentialJobs(jobs ...Job) Anypipe {
 	return p
 }
 
-// TODO @Miguel : should print to stdout (and github summary) overview
-// of executed steps
 func (p *AnypipeImpl) Run(variables map[string]interface{}) error {
 	p.log.Info(fmt.Sprintf("starting pipeline %s", p.Name))
 	du, err := dockerutils.New(p.ctx, p.log)
@@ -47,6 +45,7 @@ func (p *AnypipeImpl) Run(variables map[string]interface{}) error {
 
 	for _, job := range p.Jobs {
 		err := job.Run(p.log, du, variables)
+		job.DisplaySummary()
 		if err != nil {
 			return err
 		}
