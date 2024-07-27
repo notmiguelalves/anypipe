@@ -24,7 +24,10 @@ pipeline.WithSequentialJobs(
 pipeline.Run(inputs)
 ```
 
-Each step needs to implement the following signature `func(du dockerutils.DockerUtils, c *dockerutils.Container, variables map[string]interface{}) error`.
+Each step needs to implement the following signature
+```go
+func(du dockerutils.DockerUtils, c *dockerutils.Container, variables map[string]interface{}) error
+```
 
 A container with the user-defined image is created for each job (in the above snippet it would be `alpine:latest`. This container is then passed to each step as an argument, allowing you to execute operations in and/or out of the container.
 
