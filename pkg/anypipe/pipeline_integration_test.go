@@ -33,7 +33,7 @@ func TestAnypipe(t *testing.T) {
 			return err
 		}
 
-		if !strings.Contains(stdout.String(), "test data") {
+		if !strings.Contains(stdout, "test data") {
 			return errors.New("expected file to contain 'test data'")
 		}
 

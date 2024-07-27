@@ -1,7 +1,6 @@
 package anypipe
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -33,13 +32,13 @@ func TestJob(t *testing.T) {
 		stdout, _, ec, err := du.Exec(c, fmt.Sprintf("echo '%s'", val.(string)))
 		assert.NoError(t, err)
 		assert.Equal(t, 0, ec)
-		assert.Contains(t, stdout.String(), "TESTVALUE")
+		assert.Contains(t, stdout, "TESTVALUE")
 
 		return nil
 	}
 
 	du.EXPECT().CreateContainer("testimage:latest").Times(1).Return(&dockerutils.Container{}, nil)
-	du.EXPECT().Exec(gomock.Any(), "echo 'TESTVALUE'").Times(1).Return(bytes.NewBufferString("TESTVALUE"), bytes.NewBufferString(""), 0, nil)
+	du.EXPECT().Exec(gomock.Any(), "echo 'TESTVALUE'").Times(1).Return("TESTVALUE", "", 0, nil)
 
 	job := NewJobImpl("test job", "testimage:latest").
 		WithStep("step1", f1).
