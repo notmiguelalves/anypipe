@@ -20,7 +20,7 @@ import (
 type DockerUtils interface {
 	Close() error
 	CreateContainer(image string) (*Container, error)
-	Exec(c *Container, cmd string) (stdout, stderr *bytes.Buffer, exitcode int, err error)
+	Exec(c *Container, cmd string) (stdout, stderr string, exitcode int, err error)
 	CopyTo(c *Container, srcPath, dstPath string) error
 	CopyFrom(c *Container, srcPath, dstPath string) error
 	CopyBetweenContainers(srcContainer, destContainer *Container, srcPath, dstPath string) error
@@ -133,10 +133,10 @@ func (du *DockerUtilsImpl) CreateContainer(image string) (*Container, error) {
 }
 
 // executes the specified command on the provided container. Note: command will be executed with `sh -c <command>`
-func (du *DockerUtilsImpl) Exec(c *Container, cmd string) (stdout, stderr *bytes.Buffer, exitcode int, err error) {
+func (du *DockerUtilsImpl) Exec(c *Container, cmd string) (stdout, stderr string, exitcode int, err error) {
 	du.logger.Debug(fmt.Sprintf("going to execute %s on container %s", cmd, c.id))
 
-	shcmd := []string{"sh", "-c", cmd} // TODO @Miguel : this smells kinda bad
+	shcmd := []string{"sh", "-c", cmd}
 
 	resp, err := du.dockerClient.ContainerExecCreate(c.id, container.ExecOptions{Cmd: shcmd, Env: c.Env(), Detach: false, AttachStderr: true, AttachStdout: true, WorkingDir: "/home"})
 	if err != nil {
@@ -157,14 +157,17 @@ func (du *DockerUtilsImpl) Exec(c *Container, cmd string) (stdout, stderr *bytes
 		return
 	}
 
-	stdout = bytes.NewBuffer([]byte{})
-	stderr = bytes.NewBuffer([]byte{})
+	bOut := bytes.NewBuffer([]byte{})
+	bErr := bytes.NewBuffer([]byte{})
 
-	_, err = stdcopy.StdCopy(stdout, stderr, attachResp.Reader)
+	_, err = stdcopy.StdCopy(bOut, bErr, attachResp.Reader)
 	if err != nil {
 		du.logger.Error(fmt.Sprintf("failed to fetch container stdout/stderr from container %s : %s", c.id, err.Error()))
 		return
 	}
+
+	stdout = bOut.String()
+	stderr = bErr.String()
 
 	execInfo, err := du.dockerClient.ContainerExecInspect(resp.ID)
 	if err != nil {

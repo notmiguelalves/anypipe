@@ -10,7 +10,6 @@
 package dockerutils
 
 import (
-	bytes "bytes"
 	reflect "reflect"
 
 	gomock "go.uber.org/mock/gomock"
@@ -111,11 +110,11 @@ func (mr *MockDockerUtilsMockRecorder) CreateContainer(image any) *gomock.Call {
 }
 
 // Exec mocks base method.
-func (m *MockDockerUtils) Exec(c *Container, cmd string) (*bytes.Buffer, *bytes.Buffer, int, error) {
+func (m *MockDockerUtils) Exec(c *Container, cmd string) (string, string, int, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Exec", c, cmd)
-	ret0, _ := ret[0].(*bytes.Buffer)
-	ret1, _ := ret[1].(*bytes.Buffer)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(string)
 	ret2, _ := ret[2].(int)
 	ret3, _ := ret[3].(error)
 	return ret0, ret1, ret2, ret3

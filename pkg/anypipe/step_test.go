@@ -1,7 +1,6 @@
 package anypipe
 
 import (
-	"bytes"
 	"fmt"
 	"log/slog"
 	"os"
@@ -27,12 +26,12 @@ func TestStep(t *testing.T) {
 		stdout, _, ec, err := du.Exec(c, fmt.Sprintf("echo '%s'", val.(string)))
 		assert.NoError(t, err)
 		assert.Equal(t, 0, ec)
-		assert.Contains(t, stdout.String(), "TESTVALUE")
+		assert.Contains(t, stdout, "TESTVALUE")
 
 		return nil
 	}
 
-	du.EXPECT().Exec(&c, "echo 'TESTVALUE'").Times(1).Return(bytes.NewBufferString("TESTVALUE"), bytes.NewBufferString(""), 0, nil)
+	du.EXPECT().Exec(&c, "echo 'TESTVALUE'").Times(1).Return("TESTVALUE", "", 0, nil)
 
 	step := NewStepImpl("test step", f1)
 
