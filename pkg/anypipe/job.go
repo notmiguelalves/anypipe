@@ -83,6 +83,10 @@ func (j *JobImpl) Run(log *slog.Logger,
 		})
 	}
 
+	if gotError {
+		return errors.New("job failed")
+	}
+
 	return nil
 }
 

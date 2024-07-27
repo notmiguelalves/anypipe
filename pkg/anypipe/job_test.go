@@ -2,6 +2,7 @@ package anypipe
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -46,4 +47,30 @@ func TestJob(t *testing.T) {
 
 	err := job.Run(testLogger, du, map[string]interface{}{})
 	assert.NoError(t, err)
+}
+
+func TestJobWithFailedSteps(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	du := dockerutils.NewMockDockerUtils(ctrl)
+	testLogger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+
+	f1 := func(du dockerutils.DockerUtils, c *dockerutils.Container, variables map[string]interface{}) error {
+		return errors.New("some error")
+	}
+
+	f2 := func(du dockerutils.DockerUtils, c *dockerutils.Container, variables map[string]interface{}) error {
+		return nil
+	}
+
+	du.EXPECT().CreateContainer("testimage:latest").Times(1).Return(&dockerutils.Container{}, nil)
+
+	job := NewJobImpl("bad job", "testimage:latest").
+		WithStep("step1", f1).
+		WithStep("step2", f2)
+
+	err := job.Run(testLogger, du, map[string]interface{}{})
+	assert.Error(t, err)
+	job.DisplaySummary()
 }
