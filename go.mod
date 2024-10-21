@@ -4,7 +4,7 @@ go 1.22.5
 
 require (
 	github.com/docker/docker v27.1.1+incompatible
-	github.com/jedib0t/go-pretty/v6 v6.5.9
+	github.com/jedib0t/go-pretty/v6 v6.6.1
 	github.com/stretchr/testify v1.9.0
 	go.uber.org/mock v0.4.0
 )
